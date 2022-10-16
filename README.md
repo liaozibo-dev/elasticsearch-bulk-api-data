@@ -1,5 +1,8 @@
 This is a test document for using command script to index into Elasticsearch:
 
-curl -u elastic:123456 -s -H "Content-Type: application/x-ndjson" -XPOST localhost:9200/_bulk --data-binary @es.json
+Git Bash：
+```
+curl --cacert config/certs/http_ca.crt -u elastic:password -s -H "Content-Type:application/x-ndjson" -XPOST https://localhost:9200/_bulk --data-binary @example/es.json
+```
 
-where "123456" is the password for the Elasticsearch and "elastic" is the username
+where "password" is the password for the Elasticsearch and "elastic" is the username
