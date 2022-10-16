@@ -1,0 +1,332 @@
+# 检查 Elasticsearch 状态
+
+GET /
+
+GET _cat/health?v
+
+GET _cat/nodes?v
+
+GET _cat/indices?v
+
+##################### 索引
+
+# 插入文档时自动创建索引
+PUT twitter/_doc/1
+{
+  "user": "GB",
+  "uid": 1,
+  "city": "Beijing",
+  "province": "Beijing",
+  "country": "China"
+}
+
+# 查看 Mapping
+GET twitter/_mapping
+
+# 手动创建索引 test，并且定义 keyword 类型的 id 字段和 text 类型的 message 字段
+PUT test
+{
+  "mappings": {
+    "properties": {
+      "id": {
+        "type": "keyword"
+      },
+      "message": {
+        "type": "text"
+      }
+    }
+  }
+}
+
+# 追加一个新的 long 类型字段 age
+PUT test/_mapping
+{
+  "properties": {
+    "age": {
+      "type": "long"
+    }
+  }
+}
+
+# 查看 Mapping
+GET test/_mapping
+
+# 检查索引是否存在
+HEAD twitter
+
+# 删除索引
+DELETE twitter
+
+# 关闭索引
+POST twitter/_close
+
+GET twitter/_search
+
+# 开启索引
+POST twitter/_open
+
+GET twitter/_search
+
+##################### refresh
+
+# 默认有一个定时器每秒对文档进行 refresh，通过参数可以让文档立即 refresh
+PUT twitter/_doc/1?refresh=true
+{
+  
+  "user": "GB",
+  "uid": 1,
+  "city": "Beijing",
+  "province": "Beijing",
+  "country": "China"
+}
+
+# refresh=wait_for 相对于一个同步操作，等待文档 refresh 后再返回
+PUT twitter/_doc/1?refresh=wait_for
+{
+  "user": "GB",
+  "uid": 1,
+  "city": "Beijing",
+  "province": "Beijing",
+  "country": "China"
+}
+
+##################### 文档
+
+# 更新或插入文档
+# 如果文档已存在，执行更新操作；否则，执行插入操作
+PUT twitter/_doc/1
+{
+  "user": "GB",
+  "uid": 1,
+  "city": "Shenzhen",
+  "province": "Guangdong",
+  "country": "China"
+}
+
+# 创建文档，id 已存在会报错
+POST twitter/_create/2
+{
+  "user": "GB",
+  "uid": 2,
+  "city": "Shenzhen",
+  "province": "Guangdong",
+  "country": "China"
+}
+
+# op_type=create 创建文档，id 已存在会报错
+# op_type=index 创建文档，id 已存在会更新文档
+# URL 没有显示指定 id 时，Elasticsearch 会自动分配一个类似 n7XW3oMBLht_QWdmdH48 的 id
+POST twitter/_doc?op_type=create
+{
+    "user": "双榆树-张三",
+  "message": "今儿天气不错啊，出去转转去",
+  "uid": 2,
+  "age": 20,
+  "city": "北京",
+  "province": "北京",
+  "country": "中国",
+  "address": "中国北京市海淀区",
+  "location": {
+    "lat": "39.970718",
+    "lon": "116.325747"
+  }
+}
+
+# 自动分配 id，必须使用 POST，不能使用 PUT
+POST my_index/_doc
+{
+  "content": "this is really cool"
+}
+
+##################### 查询文档
+
+# 查询文档
+GET twitter/_doc/1
+
+# 查询文档原文
+GET twitter/_source/1
+
+# 只查看 _souce 的部分字段
+GET twitter/_doc/1?_source=city,age,province
+
+# 检查文档是否存在
+HEAD twitter/_doc/1
+
+##################### 更新文档
+
+# 覆盖更新
+PUT twitter/_doc/1
+{
+  
+   "user": "GB",
+   "uid": 1,
+   "city": "北京",
+   "province": "北京",
+   "country": "中国",
+   "location":{
+     "lat":"29.084661",
+     "lon":"111.335210"
+   }
+}
+
+GET twitter/_doc/1
+
+# 部分更新
+POST twitter/_update/1
+{
+  "doc": {
+    "city": "成都",
+    "province": "四川"
+  }
+}
+
+GET twitter/_doc/1
+
+# 条件更新
+# 对用户名是 GB 的文档进行更新
+POST twitter/_update_by_query
+{
+  "query": {
+    "match": {
+      "user": "GB"
+    }
+  },
+  "script": {
+    "source": "ctx._source.city=params.city; ctx._source.province=params.province; ctx._source.country=params.country",
+    "lang": "painless",
+    "params": {
+      "city": "上海",
+      "province": "上海",
+      "country": "中国"
+    }
+  }
+}
+
+# upsert 文档存在时，进行部分更新；文档不存在时，执行插入
+POST catalog/_update/3
+{
+  "doc": {
+    "author": "Albert Paro",
+    "title": "Elasticsearch 5.0 Cookbook",
+    "description": "Elasticsearch 5.0 Cookbook Third Edition",
+    "price": "54.99"
+  },
+  "doc_as_upsert": true
+}
+
+##################### 删除文档
+
+# 删除文档
+DELETE twitter/_doc/1
+
+
+# 条件删除
+# 删除城市是上海的文档
+POST twitter/_delete_by_query
+{
+  "query": {
+    "match": {
+      "city": "上海"
+    }
+  }
+}
+
+##################### 批量查询
+
+# 批量查询文档
+GET _mget
+{
+  "docs": [
+    {
+      "_index": "twitter",
+      "_id": 1
+    },
+    {
+      "_index": "twitter",
+      "_id": 2
+    }
+  ]
+}
+
+# 批量查询文档，只获取部分字段
+GET _mget
+{
+  "docs": [
+    {
+      "_index": "twitter",
+      "_id": 1,
+      "_source": [
+        "age",
+        "city"
+      ]
+    },
+    {
+      "_index": "twitter",
+      "_id": 2,
+      "_source": [
+        "age",
+        "city"
+      ]
+    }
+  ]
+}
+
+# 批量查询文档，简写
+GET twitter/_mget
+{
+  "ids": [1, 2]
+}
+
+# 查询所有数据
+GET twitter/_search
+
+# 查询文档总数
+GET twitter/_count
+
+#####################  批量插入
+
+# 批量更新或插入
+POST _bulk
+{"index":{"_index":"twitter","_id":1}}
+{"user":"双榆树-张三","message":"今儿天气不错啊，出去转转去","uid":2,"age":20,"city":"北京","province":"北京","country":"中国","address":"中国北京市海淀区","location":{"lat":"39.970718","lon":"116.325747"}}
+{"index":{"_index":"twitter","_id":2}}
+{"user":"东城区-老刘","message":"出发，下一站云南！","uid":3,"age":30,"city":"北京","province":"北京","country":"中国","address":"中国北京市东城区台基厂三条3号","location":{"lat":"39.904313","lon":"116.412754"}}
+{"index":{"_index":"twitter","_id":3}}
+{"user":"东城区-李四","message":"happy birthday!","uid":4,"age":30,"city":"北京","province":"北京","country":"中国","address":"中国北京市东城区","location":{"lat":"39.893801","lon":"116.408986"}}
+{"index":{"_index":"twitter","_id":4}}
+{"user":"朝阳区-老贾","message":"123,gogogo","uid":5,"age":35,"city":"北京","province":"北京","country":"中国","address":"中国北京市朝阳区建国门","location":{"lat":"39.718256","lon":"116.367910"}}
+{"index":{"_index":"twitter","_id":5}}
+{"user":"朝阳区-老王","message":"Happy BirthDay My Friend!","uid":6,"age":50,"city":"北京","province":"北京","country":"中国","address":"中国北京市朝阳区国贸","location":{"lat":"39.918256","lon":"116.467910"}}
+{"index":{"_index":"twitter","_id":6}}
+{"user":"虹桥-老吴","message":"好友来了都今天我生日，好友来了,什么 birthday happy 就成!","uid":7,"age":90,"city":"上海","province":"上海","country":"中国","address":"中国上海市闵行区","location":{"lat":"31.175927","lon":"121.383328"}}
+
+# 批量插入，一条插入失败不会影响其他插入
+# create 如果 id 已存在则会插入失败
+# index 如果 id 已存在则进行更新操作
+POST _bulk
+{"create":{"_index":"twitter","_id":1}}
+{"user":"双榆树-张三","message":"今儿天气不错啊，出去转转去","uid":2,"age":20,"city":"北京","province":"北京","country":"中国","address":"中国北京市海淀区","location":{"lat":"39.970718","lon":"116.325747"}}
+{"index":{"_index":"twitter","_id":2}}
+{"user":"东城区-老刘","message":"出发，下一站云南！","uid":3,"age":30,"city":"北京","province":"北京","country":"中国","address":"中国北京市东城区台基厂三条3号","location":{"lat":"39.904313","lon":"116.412754"}}
+{"index":{"_index":"twitter","_id":3}}
+{"user":"东城区-李四","message":"happy birthday!","uid":4,"age":30,"city":"北京","province":"北京","country":"中国","address":"中国北京市东城区","location":{"lat":"39.893801","lon":"116.408986"}}
+{"index":{"_index":"twitter","_id":4}}
+{"user":"朝阳区-老贾","message":"123,gogogo","uid":5,"age":35,"city":"北京","province":"北京","country":"中国","address":"中国北京市朝阳区建国门","location":{"lat":"39.718256","lon":"116.367910"}}
+{"index":{"_index":"twitter","_id":5}}
+{"user":"朝阳区-老王","message":"Happy BirthDay My Friend!","uid":6,"age":50,"city":"北京","province":"北京","country":"中国","address":"中国北京市朝阳区国贸","location":{"lat":"39.918256","lon":"116.467910"}}
+{"index":{"_index":"twitter","_id":6}}
+{"user":"虹桥-老吴","message":"好友来了都今天我生日，好友来了,什么 birthday happy 就成!","uid":7,"age":90,"city":"上海","province":"上海","country":"中国","address":"中国上海市闵行区","location":{"lat":"31.175927","lon":"121.383328"}}
+
+# 批量删除
+POST _bulk
+{"delete":{"_index":"twitter","_id":1}}
+{"delete":{"_index":"twitter","_id":2}}
+
+# 批量更新
+POST _bulk
+{"update":{"_index":"twitter","_id":3}}
+{"doc":{"city":"长沙"}}
+
+DELETE bank_account
+
+GET bank_account/_count
