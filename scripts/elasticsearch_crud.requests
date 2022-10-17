@@ -1,3 +1,9 @@
+# 删除历史索引
+DELETE twitter
+DELETE test
+DELETE catalog
+DELETE my_index
+
 # 检查 Elasticsearch 状态
 
 GET /
